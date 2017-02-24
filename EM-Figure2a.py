@@ -120,7 +120,17 @@ def EM(I = 10, J = 5, K = 3, e = 10**-4, mystart = 0, myend = 100000):
   L_1 = 0.0
   for i in range(I): 
    for j in range(J):
-	L_1 += (G[i,j]*np.log(QF[i,j]))+((2-G[i,j])*np.log(QF2[i,j]))
+        #dealing with -inf or NaN
+        if(QF[i,j] < 10**-300):
+        	term1 = mp.log(mp.mpf(QF[i,j]))
+        else: 
+		term1 = np.log(QF[i,j])
+        if(QF2[i,j] < 10**-300):
+        	term2 = mp.log(mp.mpf(QF2[i,j]))
+        else: 
+		term2 = np.log(QF2[i,j])
+
+	L_1 += (G[i,j]*term1)+((2-G[i,j])*term2)
     
   notconverged = ((L_1 - L_0) >= e)
   print ("L_1:{}, L_0:{}, L1-L0:{}, ntconverged:{}".format(L_1, L_0,(L_1-L_0), notconverged))	
