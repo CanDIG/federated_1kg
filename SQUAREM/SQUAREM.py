@@ -312,11 +312,11 @@ def SQUAREM(G, F0, Q0,  K=5, e=10**-4, maxiters=None):
             L_1 = np.sum(np.multiply(G, np.log(QF))
                          + np.multiply((2.-G), np.log(QF2)))
 
-            itertime = time.time()-itertime
+            itertime, lasttime = time.time(), itertime
 
             notconverged = (abs(L_1 - L_0) >= e)
             print ("{}, Likelihood:{}, delta:{}, time:{}".
-                   format(iteration, L_1, abs(L_1-L_0), itertime))
+                   format(iteration, L_1, abs(L_1-L_0), itertime-lasttime))
 
         if maxiters and iteration >= maxiters:
             break
