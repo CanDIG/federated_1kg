@@ -141,6 +141,13 @@ def initialize_F(G, K, pops, samples):
     return F
 
 
+def liklihood(G, Q, F):
+    QF = np.matmul(Q, F)
+    QF2 = np.matmul(Q, 1-F)
+    L = np.sum(np.multiply(G, np.log(QF)) + np.multiply((2.-G), np.log(QF2)))
+    return L
+
+
 def initialize_Q(G, F, rounds=10):
     K, J = F.shape
 
@@ -152,10 +159,7 @@ def initialize_Q(G, F, rounds=10):
     Q = np.random.dirichlet(alpha, size=I)
 
     Q_max = Q.copy()
-    QF = np.matmul(Q, F)
-    QF2 = np.matmul(Q, 1-F)
-
-    L_0 = np.sum(np.multiply(G, np.log(QF)) + np.multiply((2.-G), np.log(QF2)))
+    L_0 = liklihood(G, Q, F)
     print ("L_0 is:{}".format(L_0))
 
     for x in range(rounds):
@@ -165,12 +169,7 @@ def initialize_Q(G, F, rounds=10):
 
         Q = normalize_rows(Q)
 
-        QF = np.matmul(Q, F)
-        QF2 = np.matmul(Q, 1-F)
-
-        L_1 = np.sum(np.multiply(G, np.log(QF)) +
-                     np.multiply((2.-G), np.log(QF2)))
-
+        L_1 = liklihood(G, Q, F)
         print ("init {}, likelihood:{}".format(x, L_1))
         if L_1-L_0 > 0.:
             Q_max = np.matrix.copy(Q)
@@ -284,9 +283,7 @@ def SQUAREM(G, F0, Q0,  K=5, e=10**-4, maxiters=None):
     L_0 = L_1 = 0.0
 
     # Computing likelihood for the first time
-    QF = np.matmul(Q0, F0)
-    QF2 = np.matmul(Q0, 1-F0)
-    L_0 = np.sum(np.multiply(G, np.log(QF)) + np.multiply((2.-G), np.log(QF2)))
+    L_0 = liklihood(G, Q0, F0)
     print("Initial Likelihood is :{}".format(L_0))
 
     itertime = time.time()
@@ -302,15 +299,8 @@ def SQUAREM(G, F0, Q0,  K=5, e=10**-4, maxiters=None):
 
         # Compute likelihood once every 10 iterations
         if (iteration+1) % 10 == 0:
-            QF = np.matmul(Q, F)
-            QF2 = np.matmul(Q, 1-F)
-            L_0 = np.sum(np.multiply(G, np.log(QF))
-                         + np.multiply((2.-G), np.log(QF2)))
-
-            QF = np.matmul(Q0, F0)
-            QF2 = np.matmul(Q0, 1-F0)
-            L_1 = np.sum(np.multiply(G, np.log(QF))
-                         + np.multiply((2.-G), np.log(QF2)))
+            L_0 = liklihood(G, Q, F)
+            L_1 = liklihood(G, Q0, F0)
 
             itertime, lasttime = time.time(), itertime
 
