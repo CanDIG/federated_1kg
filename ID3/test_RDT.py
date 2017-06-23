@@ -18,6 +18,8 @@ import csv
 
 import argparse
 
+from ga4gh_merge import *
+
 from sklearn.decomposition import PCA
 
 
@@ -25,6 +27,7 @@ def parse_args():
 	parser = argparse.ArgumentParser(description='A differentially-private Classification of individuals to populations')
         parser.add_argument('--I', nargs=1, help='The number of individuals to choose', type=int, default = [1000])
         parser.add_argument('--train', nargs=1, help='Training samples size', type=float, default = [0.85])
+        parser.add_argument('--ga4gh', help='Use ga4gh serch_variants instead of vcf', action='store_true')
  	args = parser.parse_args()
         return args
 
@@ -34,6 +37,7 @@ if __name__ == "__main__":
     args = parse_args()
     I = args.I[0]
     train_sz = args.train[0]
+    ga4gh = args.ga4gh
    
     #Genes overlapping which the SNPs to be used as features
     my_genes = ['TYR', 'TYRP1', 'OCA2', 'MCIR', 'DCT', 'AP3B1', 'CYP3A4', 'CYP2C8', 'CYP2D6', 'CYP2C9', 'CYP1A1','AHR']
@@ -41,28 +45,42 @@ if __name__ == "__main__":
     #this will return the chrom:start-end for each gene in the arg 
     #regions = get_SNP_regions(my_genes)
 
-    # don't need to recompute with every run. We can pickle that up but this will increase file-dependency for the program.    
-    regions =  [{'start': (94938657), 'chr': 'chr10', 'end': (94989390)}, {'start': (95036771), 'chr': 'chr10', 'end': (95069497)}, {'start': (89177451), 'chr': 'chr11', 'end': (89295759)}, {'start': (94436807), 'chr': 'chr13', 'end': (94479682)}, {'start': (27754874), 'chr': 'chr15', 'end': (28099358)}, {'start': (74719541), 'chr': 'chr15', 'end': (74725610)}, {'start': (42126498), 'chr': 'chr22', 'end': (42130906)}, {'start': (78000524), 'chr': 'chr5', 'end': (78294755)}, {'start': (17298621), 'chr': 'chr7', 'end': (17346152)}, {'start': (99756959), 'chr': 'chr7', 'end': (99784265)}, {'start': (12685438), 'chr': 'chr9', 'end': (12710290)}]
- 
-    #If we have regions already, we can pull that up from a    
-    #regions = read_regions(filename)
- 
-    G = Get_Genotype(regions, I)
+    # Use ga4gh search_variants instead of a vcf
+    if ga4gh:
 
-    #we don't want all because this may make a model overfit to our data 
-    G = filter_genotype(G, I)
-    
-    #now we need each row as an individual's genotype 
-    G = np.transpose(G)
-     
-    
+        regions = get_filter_regions()
+        # regions = regions[:2]
+        servers = ["https://ga4gh.ccm.sickkids.ca/ga4gh/", "http://ga4gh.pmgenomics.ca/ga4gh/"]
+        # servers = servers[:1]
 
-    #This file will be used to pull up the samples. One in the Samples-Subpops-Pops.csv file has a super-set of samples in vcfs 
-    filename = "ALL.chr1.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz"
+        G = get_ga4gh_variants(servers, regions)
+        data, attr, target_attr = ga4gh_Bind_Data(G, I)
 
-    #bind the genotypes(features), target_attr(pops) and returns a list of (feature:val)dictionaries
-    data, attr, target_attr = Bind_Data(G, I, filename)
-    
+    # Use a local vcf
+    else:
+
+        # don't need to recompute with every run. We can pickle that up but this will increase file-dependency for the program.    
+        regions =  [{'start': (94938657), 'chr': 'chr10', 'end': (94989390)}, {'start': (95036771), 'chr': 'chr10', 'end': (95069497)}, {'start': (89177451), 'chr': 'chr11', 'end': (89295759)}, {'start': (94436807), 'chr': 'chr13', 'end': (94479682)}, {'start': (27754874), 'chr': 'chr15', 'end': (28099358)}, {'start': (74719541), 'chr': 'chr15', 'end': (74725610)}, {'start': (42126498), 'chr': 'chr22', 'end': (42130906)}, {'start': (78000524), 'chr': 'chr5', 'end': (78294755)}, {'start': (17298621), 'chr': 'chr7', 'end': (17346152)}, {'start': (99756959), 'chr': 'chr7', 'end': (99784265)}, {'start': (12685438), 'chr': 'chr9', 'end': (12710290)}]
+
+        #If we have regions already, we can pull that up from a    
+        #regions = read_regions(filename)
+
+        G = Get_Genotype(regions, I)
+
+        #we don't want all because this may make a model overfit to our data 
+        G = filter_genotype(G, I)
+
+        #now we need each row as an individual's genotype 
+        G = np.transpose(G)
+
+
+
+        #This file will be used to pull up the samples. One in the Samples-Subpops-Pops.csv file has a super-set of samples in vcfs 
+        filename = "ALL.chr1.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz"
+
+        #bind the genotypes(features), target_attr(pops) and returns a list of (feature:val)dictionaries
+        data, attr, target_attr = Bind_Data(G, I, filename)
+
     #test the data with Python's
     # Test_SK_Learn(data, train_sz)
 
@@ -145,7 +163,7 @@ if __name__ == "__main__":
 
                         print(len(train_data))
                         print(len(test_data))
-                        Confusion_Matrix(classification, actual_values)
+                        print(Confusion_Matrix(classification, actual_values))
 
     # results table
     results_df = pda.DataFrame.from_records(results_data)
